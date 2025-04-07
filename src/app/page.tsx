@@ -1,103 +1,239 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { useEffect, useState } from 'react';
+
+type Participant = {
+  name: string;
+  class: string;
+  contact: string;
+};
+
+type Registration = {
+  _id: string;
+  team: string;
+  event: string;
+  participants: Participant[];
+};
+
+const eventDetails: { [event: string]: number } = {
+  "Treasure Hunt": 4,
+  "IT Brand Rangoli": 2,
+  "Quiz": 2,
+  "Coding": 2,
+  "Photo Edits": 1,
+  "Video Edits": 1,
+  "Soft Interview": 1,
+  "Gaming Girls (Militia)": 2,
+  "Free Fire": 2,
+  "BGMI": 2,
+  "PPT Presentation": 1,
+};
+
+export default function AdminPage() {
+  const [registrations, setRegistrations] = useState<Registration[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedEvent, setSelectedEvent] = useState<string | null>(null);
+  const [editingReg, setEditingReg] = useState<Registration | null>(null);
+
+  useEffect(() => {
+    const fetchRegistrations = async () => {
+      try {
+        const res = await fetch('/api/registrations');
+        const data = await res.json();
+        setRegistrations(data?.data || []);
+      } catch (err) {
+        console.error('Failed to fetch data', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRegistrations();
+  }, []);
+
+  const filteredRegistrations = selectedEvent
+    ? registrations.filter((reg) => reg.event === selectedEvent)
+    : registrations;
+
+  const handleEditChange = (index: number, field: keyof Participant, value: string) => {
+    if (!editingReg) return;
+    const updated = [...editingReg.participants];
+    updated[index] = { ...updated[index], [field]: value };
+    setEditingReg({ ...editingReg, participants: updated });
+  };
+
+  // ✅ Updated saveEdit function
+  const saveEdit = async () => {
+    if (!editingReg) return;
+
+    const res = await fetch('/api/registrations', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: editingReg._id,
+        participants: editingReg.participants
+      }),
+    });
+
+    if (res.ok) {
+      setRegistrations((prev) =>
+        prev.map((r) => (r._id === editingReg._id ? { ...r, participants: editingReg.participants } : r))
+      );
+      setEditingReg(null);
+    } else {
+      alert('Failed to update');
+    }
+  };
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
+    <div className="min-h-screen bg-gray-100 text-black flex">
+      {/* Sidebar */}
+      <div className="w-64 bg-gray-200 p-4 border-r border-gray-400">
+        <h2 className="text-xl font-bold text-red-600 mb-4">Events</h2>
+        <ul className="space-y-2">
+          <li>
+            <button
+              onClick={() => setSelectedEvent(null)}
+              className={`w-full text-left px-4 py-2 rounded ${
+                selectedEvent === null ? 'bg-red-500 text-white' : 'hover:bg-gray-300'
+              }`}
+            >
+              All Events
+            </button>
           </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+          {Object.keys(eventDetails).map((eventName) => (
+            <li key={eventName}>
+              <button
+                onClick={() => setSelectedEvent(eventName)}
+                className={`w-full text-left px-4 py-2 rounded ${
+                  selectedEvent === eventName ? 'bg-red-500 text-white' : 'hover:bg-gray-300'
+                }`}
+              >
+                {eventName}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      {/* Main content */}
+      <div className="flex-1 p-6 overflow-x-auto">
+        <h1 className="text-3xl font-bold text-gray-700 mb-6 text-center">IT Fest Admin Panel</h1>
+
+        {loading ? (
+          <div>Loading...</div>
+        ) : (
+          <table className="w-full text-sm text-left border border-gray-300 rounded-md overflow-hidden bg-white">
+            <thead className="bg-gray-200 text-black">
+              <tr>
+                <th className="p-2">Team</th>
+                <th className="p-2">Event</th>
+                <th className="p-2">Participants</th>
+                <th className="p-2">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredRegistrations.map((reg) => (
+                <tr key={reg._id} className="border-t border-gray-200">
+                  <td className="p-2">{reg.team}</td>
+                  <td className="p-2">{reg.event}</td>
+                  <td className="p-2 whitespace-pre-line">
+                    {reg.participants.map((p, i) => (
+                      <div key={i}>
+                        {p.name} ({p.class}) - {p.contact}
+                      </div>
+                    ))}
+                  </td>
+                  <td className="p-2 space-x-2">
+                    <button
+                      className="bg-yellow-500 px-3 py-1 rounded text-white hover:bg-yellow-600"
+                      onClick={() => setEditingReg(reg)}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className="bg-red-500 px-3 py-1 rounded text-white hover:bg-red-600"
+                      onClick={async () => {
+                        const confirmDelete = confirm('Are you sure you want to delete this team?');
+                        if (!confirmDelete) return;
+
+                        const res = await fetch('/api/registrations', {
+                          method: 'DELETE',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ id: reg._id }),
+                        });
+
+                        if (res.ok) {
+                          setRegistrations((prev) => prev.filter((r) => r._id !== reg._id));
+                        } else {
+                          alert('Failed to delete');
+                        }
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {filteredRegistrations.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="text-center text-gray-500 py-4">
+                    No registrations found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        )}
+
+        {/* Edit Modal */}
+        {editingReg && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
+            <div className="bg-white p-6 rounded w-[90%] max-w-lg">
+              <h2 className="text-xl font-semibold mb-4">Edit Team: {editingReg.team}</h2>
+              {editingReg.participants.map((p, i) => (
+                <div key={i} className="mb-2 space-y-1">
+                  <input
+                    type="text"
+                    placeholder="Name"
+                    value={p.name}
+                    className="w-full border p-2 rounded"
+                    onChange={(e) => handleEditChange(i, 'name', e.target.value)}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Class"
+                    value={p.class}
+                    className="w-full border p-2 rounded"
+                    onChange={(e) => handleEditChange(i, 'class', e.target.value)}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Contact"
+                    value={p.contact}
+                    className="w-full border p-2 rounded"
+                    onChange={(e) => handleEditChange(i, 'contact', e.target.value)}
+                  />
+                </div>
+              ))}
+              <div className="flex justify-end mt-4 space-x-2">
+                <button
+                  className="bg-gray-400 px-4 py-2 rounded text-white"
+                  onClick={() => setEditingReg(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="bg-green-600 px-4 py-2 rounded text-white"
+                  onClick={saveEdit}
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
