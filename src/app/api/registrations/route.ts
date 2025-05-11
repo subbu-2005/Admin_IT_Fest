@@ -24,12 +24,11 @@ export async function GET(req: Request) {
   }
 }
 
-// DELETE handler using query parameter for ID
+// ✅ DELETE handler using request body
 export async function DELETE(request: Request) {
   try {
     await connectDB();
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get("id");
+    const { id } = await request.json(); // ✅ Reading ID from body
 
     if (!id) {
       return NextResponse.json({ error: "Missing ID" }, { status: 400 });
@@ -43,7 +42,7 @@ export async function DELETE(request: Request) {
   }
 }
 
-// ✅ PUT handler for updating a registration
+// PUT handler for updating a registration
 export async function PUT(req: Request) {
   try {
     await connectDB();

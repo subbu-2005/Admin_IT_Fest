@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 type Participant = {
   name: string;
@@ -16,17 +18,17 @@ type Registration = {
 };
 
 const eventDetails: { [event: string]: number } = {
-  "Treasure Hunt": 4,
-  "IT Brand Rangoli": 2,
-  "Quiz": 2,
-  "Coding": 2,
-  "Photo Edits": 1,
-  "Video Edits": 1,
-  "Soft Interview": 1,
-  "Gaming Girls (Militia)": 2,
-  "Free Fire": 2,
-  "BGMI": 2,
-  "PPT Presentation": 1,
+  "Ready Player One": 4,
+  "Rangitaranaga": 2,
+  "The Matrix": 2,
+  "KGF(KODE GEEK FORCE)": 2,
+  "Shutter island": 1,
+  "Blade Runner 2049": 1,
+  "Invictus": 1,
+  "Furiosa": 2,
+  "Fight Club": 2,
+  "Death Race": 2,
+  "Inception": 1,
 };
 
 export default function AdminPage() {
@@ -62,7 +64,6 @@ export default function AdminPage() {
     setEditingReg({ ...editingReg, participants: updated });
   };
 
-  // ✅ Updated saveEdit function
   const saveEdit = async () => {
     if (!editingReg) return;
 
@@ -85,46 +86,146 @@ export default function AdminPage() {
     }
   };
 
+  const downloadPDF = () => {
+    const doc = new jsPDF();
+    const title = selectedEvent || 'All Events';
+  
+    doc.setFontSize(16);
+    doc.text(`Registrations for: ${title}`, 14, 15);
+  
+    // Group registrations by team
+    const groupedByTeam = {};
+    filteredRegistrations.forEach((reg) => {
+      if (!groupedByTeam[reg.team]) {
+        groupedByTeam[reg.team] = [];
+      }
+      groupedByTeam[reg.team].push(reg);
+    });
+  
+    const body = [];
+  
+    // Build body with styled team headers + participants
+    Object.entries(groupedByTeam).forEach(([teamName, registrations]) => {
+      // Add a team header row (bold, full-width, centered)
+      body.push([
+        {
+          content: `Team: ${teamName}`,
+          colSpan: 6,
+          styles: {
+            halign: 'center',
+            fontStyle: 'bold',
+            fillColor: [41, 128, 185], // nice blue
+            textColor: 255,
+          },
+        },
+      ]);
+  
+      registrations.forEach((reg) => {
+        reg.participants.forEach((p, idx) => {
+          body.push([
+            reg.team,
+            reg.event,
+            idx + 1,
+            p.name,
+            p.class,
+            p.contact,
+          ]);
+        });
+      });
+  
+      // Add an empty spacer row between teams (optional but clean)
+      body.push([
+        {
+          content: '',
+          colSpan: 6,
+          styles: { fillColor: [255, 255, 255] },
+        },
+      ]);
+    });
+  
+    autoTable(doc, {
+      head: [['Team', 'Event', 'S.No', 'Name', 'Class', 'Contact']],
+      body: body,
+      startY: 25,
+      styles: {
+        fontSize: 10,
+        cellPadding: 3,
+      },
+      headStyles: {
+        fillColor: [22, 160, 133], // teal header
+        textColor: 255,
+        fontStyle: 'bold',
+      },
+      alternateRowStyles: {
+        fillColor: [240, 240, 240], // light gray stripe
+      },
+      margin: { top: 20 },
+      theme: 'striped',
+    });
+  
+    doc.save(`${title.replace(/\s/g, '_')}_Registrations.pdf`);
+  };
+  
+
   return (
-    <div className="min-h-screen bg-gray-100 text-black flex">
+    <div className="min-h-screen bg-black text-gray-200 flex flex-col md:flex-row">
       {/* Sidebar */}
-      <div className="w-64 bg-gray-200 p-4 border-r border-gray-400">
-        <h2 className="text-xl font-bold text-red-600 mb-4">Events</h2>
-        <ul className="space-y-2">
-          <li>
-            <button
-              onClick={() => setSelectedEvent(null)}
-              className={`w-full text-left px-4 py-2 rounded ${
-                selectedEvent === null ? 'bg-red-500 text-white' : 'hover:bg-gray-300'
-              }`}
-            >
-              All Events
-            </button>
-          </li>
-          {Object.keys(eventDetails).map((eventName) => (
-            <li key={eventName}>
+      {!selectedEvent && (
+        <div className="w-full md:w-64 bg-gray-800 text-white p-4 border-r border-gray-700">
+          <h2 className="text-xl font-bold mb-4">Events</h2>
+          <ul className="space-y-2">
+            <li>
               <button
-                onClick={() => setSelectedEvent(eventName)}
+                onClick={() => setSelectedEvent(null)}
                 className={`w-full text-left px-4 py-2 rounded ${
-                  selectedEvent === eventName ? 'bg-red-500 text-white' : 'hover:bg-gray-300'
+                  selectedEvent === null ? 'bg-gray-700' : 'hover:bg-gray-600'
                 }`}
               >
-                {eventName}
+                All Events
               </button>
             </li>
-          ))}
-        </ul>
-      </div>
+            {Object.keys(eventDetails).map((eventName) => (
+              <li key={eventName}>
+                <button
+                  onClick={() => setSelectedEvent(eventName)}
+                  className={`w-full text-left px-4 py-2 rounded ${
+                    selectedEvent === eventName ? 'bg-gray-700' : 'hover:bg-gray-600'
+                  }`}
+                >
+                  {eventName}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Main content */}
-      <div className="flex-1 p-6 overflow-x-auto">
-        <h1 className="text-3xl font-bold text-gray-700 mb-6 text-center">IT Fest Admin Panel</h1>
+      <div className="flex-1 p-4 md:p-6 overflow-x-auto">
+        <h1 className="text-3xl font-bold text-center mb-6">IT Fest Admin Panel</h1>
+
+        {selectedEvent && (
+          <div className="flex justify-between items-center mb-4">
+            <button
+              onClick={() => setSelectedEvent(null)}
+              className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded"
+            >
+              Back to All Events
+            </button>
+            <button
+              onClick={downloadPDF}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+            >
+              Download PDF
+            </button>
+          </div>
+        )}
 
         {loading ? (
-          <div>Loading...</div>
+          <div className="text-center">Loading...</div>
         ) : (
-          <table className="w-full text-sm text-left border border-gray-300 rounded-md overflow-hidden bg-white">
-            <thead className="bg-gray-200 text-black">
+          <table className="w-full text-sm text-left border border-gray-700 rounded-md overflow-hidden bg-gray-900">
+            <thead className="bg-gray-700 text-gray-200">
               <tr>
                 <th className="p-2">Team</th>
                 <th className="p-2">Event</th>
@@ -134,7 +235,7 @@ export default function AdminPage() {
             </thead>
             <tbody>
               {filteredRegistrations.map((reg) => (
-                <tr key={reg._id} className="border-t border-gray-200">
+                <tr key={reg._id} className="border-t border-gray-800">
                   <td className="p-2">{reg.team}</td>
                   <td className="p-2">{reg.event}</td>
                   <td className="p-2 whitespace-pre-line">
@@ -189,36 +290,36 @@ export default function AdminPage() {
         {/* Edit Modal */}
         {editingReg && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50">
-            <div className="bg-white p-6 rounded w-[90%] max-w-lg">
-              <h2 className="text-xl font-semibold mb-4">Edit Team: {editingReg.team}</h2>
+            <div className="bg-gray-800 p-6 rounded w-[90%] max-w-lg">
+              <h2 className="text-xl font-semibold mb-4 text-white">Edit Team: {editingReg.team}</h2>
               {editingReg.participants.map((p, i) => (
                 <div key={i} className="mb-2 space-y-1">
                   <input
                     type="text"
                     placeholder="Name"
                     value={p.name}
-                    className="w-full border p-2 rounded"
+                    className="w-full border p-2 rounded bg-gray-700 text-white"
                     onChange={(e) => handleEditChange(i, 'name', e.target.value)}
                   />
                   <input
                     type="text"
                     placeholder="Class"
                     value={p.class}
-                    className="w-full border p-2 rounded"
+                    className="w-full border p-2 rounded bg-gray-700 text-white"
                     onChange={(e) => handleEditChange(i, 'class', e.target.value)}
                   />
                   <input
                     type="text"
                     placeholder="Contact"
                     value={p.contact}
-                    className="w-full border p-2 rounded"
+                    className="w-full border p-2 rounded bg-gray-700 text-white"
                     onChange={(e) => handleEditChange(i, 'contact', e.target.value)}
                   />
                 </div>
               ))}
               <div className="flex justify-end mt-4 space-x-2">
                 <button
-                  className="bg-gray-400 px-4 py-2 rounded text-white"
+                  className="bg-gray-500 px-4 py-2 rounded text-white"
                   onClick={() => setEditingReg(null)}
                 >
                   Cancel
